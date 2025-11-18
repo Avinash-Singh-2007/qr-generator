@@ -5,80 +5,89 @@ const downloadBtn = document.getElementById('downloadBtn');
 const qrContainer = document.querySelector('.qr-body');
 
 let size = sizes.value;
-
-// Wait for QR to generate before download
 let qrReady = false;
 
-// Generate button
+// Generate QR
 generateBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    isEmptyInput();
+    generateQRCode();
 });
 
-// Size change
+// Change size
 sizes.addEventListener('change', (e) => {
     size = e.target.value;
-    isEmptyInput();
+    if (qrText.value.trim() !== "") generateQRCode();
 });
 
-// Download (Mobile Safe)
-downloadBtn.addEventListener("click", function (e) {
+// Download handler
+downloadBtn.addEventListener("click", async (e) => {
     e.preventDefault();
 
     if (!qrReady) {
-        alert("Please generate the QR code first!");
+        alert("Generate the QR code first!");
         return;
     }
 
-    let img = document.querySelector(".qr-body img");
-    let canvas = document.querySelector(".qr-body canvas");
+    const pngBlob = await convertQRToPNG();
+    const url = URL.createObjectURL(pngBlob);
 
-    if (img) {
-        downloadImage(img.src);
-        return;
-    }
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "QR_Code.png";
+    link.style.display = "none";
 
-    if (canvas) {
-        canvas.toBlob(function (blob) {
-            const url = URL.createObjectURL(blob);
-            downloadImage(url);
-        });
-    }
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 });
 
-// Universal download function
-function downloadImage(url) {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "QR_Code.png";
-
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-}
-
-// Check input
-function isEmptyInput() {
-    qrText.value.length > 0 
-        ? generateQRCode() 
-        : alert("Enter the text or URL to generate your QR code");
-}
-
-// Generate QR Code (fixed)
+// Generate QR
 function generateQRCode() {
+    if (!qrText.value.trim()) {
+        alert("Enter some text or URL");
+        return;
+    }
+
     qrContainer.innerHTML = "";
     qrReady = false;
 
     new QRCode(qrContainer, {
         text: qrText.value,
-        height: size,
         width: size,
+        height: size,
         colorLight: "#ffffff",
-        colorDark: "#000000",
+        colorDark: "#000000"
     });
 
-    // Wait for QR to finish rendering (mobile safe)
+    // ensure QR fully rendered
     setTimeout(() => {
         qrReady = true;
-    }, 300); 
+    }, 300);
+}
+
+// Convert QR to PNG (always works)
+async function convertQRToPNG() {
+    return new Promise((resolve) => {
+        const img = qrContainer.querySelector("img");
+        const canvas = qrContainer.querySelector("canvas");
+
+        // If canvas already exists → convert directly
+        if (canvas) {
+            canvas.toBlob(resolve, "image/png");
+            return;
+        }
+
+        // If image exists → draw on an OFFSCREEN canvas (mobile fix)
+        if (img) {
+            const tempCanvas = document.createElement("canvas");
+            tempCanvas.width = img.width;
+            tempCanvas.height = img.height;
+
+            const ctx = tempCanvas.getContext("2d");
+
+            ctx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+
+            tempCanvas.toBlob(resolve, "image/png");
+        }
+    });
 }
