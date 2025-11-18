@@ -6,6 +6,9 @@ const qrContainer = document.querySelector('.qr-body');
 
 let size = sizes.value;
 
+// Wait for QR to generate before download
+let qrReady = false;
+
 // Generate button
 generateBtn.addEventListener('click', (e) => {
     e.preventDefault();
@@ -18,9 +21,14 @@ sizes.addEventListener('change', (e) => {
     isEmptyInput();
 });
 
-// Download button (Mobile Safe)
+// Download (Mobile Safe)
 downloadBtn.addEventListener("click", function (e) {
     e.preventDefault();
+
+    if (!qrReady) {
+        alert("Please generate the QR code first!");
+        return;
+    }
 
     let img = document.querySelector(".qr-body img");
     let canvas = document.querySelector(".qr-body canvas");
@@ -38,7 +46,7 @@ downloadBtn.addEventListener("click", function (e) {
     }
 });
 
-// Helper: download function (works on all mobiles)
+// Universal download function
 function downloadImage(url) {
     const a = document.createElement("a");
     a.href = url;
@@ -56,9 +64,10 @@ function isEmptyInput() {
         : alert("Enter the text or URL to generate your QR code");
 }
 
-// Generate QR Code
+// Generate QR Code (fixed)
 function generateQRCode() {
     qrContainer.innerHTML = "";
+    qrReady = false;
 
     new QRCode(qrContainer, {
         text: qrText.value,
@@ -67,4 +76,9 @@ function generateQRCode() {
         colorLight: "#ffffff",
         colorDark: "#000000",
     });
+
+    // Wait for QR to finish rendering (mobile safe)
+    setTimeout(() => {
+        qrReady = true;
+    }, 300); 
 }
